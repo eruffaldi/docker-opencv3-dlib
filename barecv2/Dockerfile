@@ -1,11 +1,11 @@
-FROM ubuntu:16.04
+FROM ubuntu:14.04
 
 ENV PYTHON_VERSION 2.7
 
 RUN apt-get -y update
 
 RUN apt-get install -y gstreamer1.0-alsa gstreamer1.0-libav gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-tools x264 libx264-dev
-RUN apt-get install -y ffmpeg alsa-base alsa-utils pulseaudio
+RUN apt-get install -y ffmpeg alsa-base alsa-utils pulseaudio libusb-1.0
 RUN apt-get -y install python$PYTHON_VERSION-dev wget unzip libtbb-dev \
                        build-essential cmake git pkg-config libatlas-base-dev gfortran \
                        libjasper-dev libgtk2.0-dev libavcodec-dev libavformat-dev \
@@ -13,8 +13,8 @@ RUN apt-get -y install python$PYTHON_VERSION-dev wget unzip libtbb-dev \
 RUN wget https://bootstrap.pypa.io/get-pip.py && python get-pip.py
 RUN pip install numpy matplotlib
 
-RUN wget https://github.com/opencv/opencv/archive/3.2.0.zip -O opencv3.zip && \
-    unzip -q opencv3.zip && mv /opencv-3.2.0 /opencv
+RUN wget https://github.com/opencv/opencv/archive/2.4.13.2.zip -O opencv2.zip && \
+    unzip -q opencv2.zip && mv /opencv-2.4.13 /opencv
 
 RUN mkdir /opencv/build
 WORKDIR /opencv/build

@@ -16,7 +16,7 @@ RUN rm /nvidia/${CUDA_RUN_FILE}
 RUN apt-get -y update
 
 # the following is for add-apt-repository
-RUN apt-get install -y software-properties-common usbutils
+RUN apt-get install -q -y  software-properties-common usbutils
 
 RUN apt-get install -y gstreamer1.0-alsa gstreamer1.0-libav gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-tools x264 libx264-dev
 RUN add-apt-repository ppa:mc3man/trusty-media

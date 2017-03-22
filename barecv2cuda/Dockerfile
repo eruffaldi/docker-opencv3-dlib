@@ -6,9 +6,13 @@ RUN wget https://bootstrap.pypa.io/get-pip.py && python get-pip.py
 RUN pip install numpy matplotlib
 
 RUN wget https://github.com/opencv/opencv/archive/2.4.13.2.zip -O opencv2.zip && \
+<<<<<<< HEAD
     unzip -q opencv2.zip && mv opencv-2.4.13.2 /opencv
 
 RUN apt-get install libtbb-dev
+=======
+    unzip -q opencv2.zip && mv /opencv-2.4.13.2 /opencv
+>>>>>>> 7dae40cdb05474d59b60ec16327ced9f4b61097e
 
 RUN mkdir /opencv/build
 WORKDIR /opencv/build
@@ -46,8 +50,13 @@ RUN wget https://codeload.github.com/davisking/dlib/zip/master -O dlib.zip && \
 WORKDIR /tmp/dlib
 ENV CFLAGS -march=native -O3 -flto
 ENV CXXFLAGS -march=native -O3 -flto
+<<<<<<< HEAD
 #RUN python setup.py --yes USE_AVX_INSTRUCTION --yes USE_SSE4_INSTRUCTIONS --yes USE_SSE2_INSTRUCTIONS=ON --yes NDEBUG --yes DLIB_HAVE_SSE41 --yes DLIB_HAVE_SSE3 --yes DLIB_HAVE_SSE2 --yes DLIB_USE_BLAS --yes DLIB_USE_LAPACK build
 #RUN python setup.py install 
+=======
+RUN alias "make=$(which make) -j" python setup.py --yes USE_AVX_INSTRUCTION --yes USE_SSE4_INSTRUCTIONS --yes USE_SSE2_INSTRUCTIONS=ON --yes NDEBUG --yes DLIB_HAVE_SSE41 --yes DLIB_HAVE_SSE3 --yes DLIB_HAVE_SSE2 --yes DLIB_USE_BLAS --yes DLIB_USE_LAPACK build
+RUN python setup.py install 
+>>>>>>> 7dae40cdb05474d59b60ec16327ced9f4b61097e
 
 # Define default command.
 CMD ["bash"]

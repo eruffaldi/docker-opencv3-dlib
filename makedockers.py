@@ -1,5 +1,6 @@
 import argparse
 from toposort import toposort, toposort_flatten
+import os
 
 #http://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
 
@@ -209,8 +210,8 @@ def main():
 	parser.add_argument('--ffmpeg',help="enable ffmpeg",type=bool,default=True)
 	parser.add_argument('--gstreamer',help="enable gstreamer",type=bool,default=True)
 	parser.add_argument('--split',help="split docker files",type=bool,default=False)
-	parser.add_argument('--name',help="name of output")
-	parser.add_argument('--output-dir',help="build dir",default="build")
+	parser.add_argument('--name',help="name of output",required=True)
+	parser.add_argument('--output-dir',help="build dir for split",default="build")
 
 	args = parser.parse_args()
 
@@ -233,7 +234,7 @@ def main():
 
 	# emit as single, or as parts
 	if args.split:
-		pass
+		print "not implemented"
 	else:
 		allout = []
 		withfrom = None
@@ -252,7 +253,10 @@ def main():
 		if withfrom is None:
 			print "some part should specify a source!"
 		else:
-			open("out.docker","wb").write("\n".join(allout))
+			j = os.path.join(args.output_dir,args.name)
+			if not os.path.isdir(j):
+				os.makedirs(j)
+			open(os.path.join(j,"Dockerfile"),"wb").write("\n".join(allout))
 
 
 

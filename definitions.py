@@ -1,10 +1,27 @@
+class Dockerfile:
+	def __init__(self,origin,body):
+		self.origin = origin
+		self.body = body
 def part_linux(args):
 	if args.ubuntu == "14.04":
-		return Dockerfile("14.04",None)
+		return Dockerfile("14.04",
+			"""
+ENV GCCVERSION=4.9
+RUN add-apt-repository ppa:ubuntu-toolchain-r/test
+RUN apt-get update
+RUN apt-get install -yq g++-$GCCVERSION
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-$GCCVERSION 50
+RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-$GCCVERSION 50
+				""")
 	elif args.ubuntu == "16.04":
 		return Dockerfile("16.04",None)
 	else:
 		raise "Unknown ubuntu " + args.ubuntu
+
+def part_cudnn(args):
+	# download cudnn
+	# copy to correct cuda version
+	pass
 
 def part_opencv(args):
 	prerequisites = """
@@ -18,13 +35,13 @@ RUN pip install numpy matplotlib
 	"""	
 	if args.opencv.startswith("2."):
 		fetchpart = """
-RUN wget https://github.com/opencv/opencv/archive/2.4.13.2.zip -O opencv2.zip && \
-    unzip -q opencv2.zip && mv /opencv-2.4.13.2 /opencv
+RUN wget https://github.com/opencv/opencv/archive/2.4.13.2.zip -O ~/opencv2.zip && \
+    unzip -q opencv2.zip && mv ~/opencv-2.4.13.2 ~/opencv
 		"""
 	else:
 		fetchpart = """
-RUN wget https://github.com/opencv/opencv/archive/3.2.0.zip -O opencv3.zip && \
-unzip -q opencv3.zip && mv /opencv-3.2.0 /opencv
+RUN wget https://github.com/opencv/opencv/archive/3.2.0.zip -O ~/opencv3.zip && \
+unzip -q opencv3.zip && mv ~/opencv-3.2.0 ~/opencv
 		"""
 	return Dockerfile(None,"""
 ENV PYTHON_VERSION 2.7
@@ -35,8 +52,8 @@ RUN pip install numpy matplotlib
 
 {fetchpart:s}
 
-RUN mkdir /opencv/build
-WORKDIR /opencv/build
+RUN mkdir ~/opencv/build
+WORKDIR ~/opencv/build
 RUN cmake -D CMAKE_BUILD_TYPE=RELEASE \
 	-D CMAKE_CXX_FLAGS=-march=native \
 	-D CMAKE_C_FLAGS=-march=native \
@@ -99,8 +116,6 @@ RUN apt-get install -y gstreamer1.0-alsa gstreamer1.0-libav gstreamer1.0-plugins
 def part_boost(args):
 	pass
 
-def part_gcc(args):
-	pass
 
 def part_avx2(args):
 	pass
@@ -115,13 +130,13 @@ ENV PYTHON_VERSION 2.7
 
 ENV CUDA_RUN_FILE ${CUDA_RUN_FILE}
 
-RUN mkdir /nvidia
-ADD . /nvidia/
+RUN mkdir ~//nvidia
+ADD . ~/nvidia/
 RUN apt-get update && apt-get install -q -y wget build-essential 
 
-RUN chmod +x /nvidia/${CUDA_RUN_FILE}
-RUN /nvidia/${CUDA_RUN_FILE} --toolkit --silent
-RUN rm /nvidia/${CUDA_RUN_FILE} 
+RUN chmod +x ~/nvidia/${CUDA_RUN_FILE}
+RUN ~/nvidia/${CUDA_RUN_FILE} --toolkit --silent
+RUN rm ~/nvidia/${CUDA_RUN_FILE} 
 """)
 
 

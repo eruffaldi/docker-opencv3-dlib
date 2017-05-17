@@ -4,6 +4,31 @@ import os
 from definitions import *
 
 #http://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
+rdock2shell="""
+
+alias FROM=echo
+alias RUN=
+alias ARG=echo
+alias ENV="export $1=$2"
+alias WORKDIR=cd
+
+"""
+
+def docker2shell(x):
+	#https://gist.github.com/eruffaldi/7d02d6ec040b9c0498b1e07898b3c827
+	#TODO ARG replacement
+	q = ["#!/bin/bash"] + rdock2shell.split("\n")
+	args = dict()
+	for line in x.split("\n"):
+		if line.startswith("ARG "):
+			name,value = line[4:].split("=",2)
+			args[name] = value.strip()
+		else:
+			if line.find("${") >= 0:
+				for k,v in args.items():
+					line = line.replace("${%s}" % k,v)
+			q.append(line)
+	return "\n".join(q)
 
 def xtoposort(a):
 	q = list(a)
@@ -18,10 +43,7 @@ def xtoposort(a):
 		rr.extend([q[i] for i in x])
 	return rr
 
-class Dockerfile:
-	def __init__(self,origin,body):
-		self.origin = origin
-		self.body = body
+
 class Node:
 	def __init__(self,name):
 		self.name = name
@@ -79,13 +101,14 @@ def main():
 	parser.add_argument('--sse4',help="enable sse4",type=bool,default=True)
 	parser.add_argument('--avx2',help="enable avx2",type=bool,default=True)
 	parser.add_argument('--dlib',help="enable dlib",type=bool)
-	parser.add_argument('--gcc',help="enable gcc update")
+	#parser.add_argument('--gcc',help="enable gcc update")
 	parser.add_argument('--boost',help="enable boost update with this version")
 	parser.add_argument('--ffmpeg',help="enable ffmpeg",type=bool,default=True)
 	parser.add_argument('--gstreamer',help="enable gstreamer",type=bool,default=True)
 	parser.add_argument('--split',help="split docker files",type=bool,default=False)
 	parser.add_argument('--name',help="name of output",required=True)
 	parser.add_argument('--output-dir',help="build dir for split",default="build")
+	parser.add_argument('--shell',help="generate for shell",action="store_true")
 
 	args = parser.parse_args()
 
@@ -99,7 +122,8 @@ def main():
 	parts.add("dlib",part_dlib,dict(dlib="*"),requires=dict(opencv="3"))
 	parts.add("cuda",part_cuda,dict(cuda="*"),requires=dict(ubuntu="*"))
 	parts.add("boost",part_boost,dict(boost="*"),requires=dict(ubuntu="*"))
-	parts.add("gcc",part_gcc,dict(gcc="*"),requires=dict(ubuntu="*"))
+	#parts.add("gcc",part_gcc,dict(gcc="*"),requires=dict(ubuntu="*"))
+	parts.add("cudnn",part_cudnn,dict(cudnn="*"),requires=dict(cuda="*"))
 
 	# now filter the graph by the conditions of the args, one node at time
 	parts.filter(args)
@@ -119,7 +143,7 @@ def main():
 			if d.origin is not None:
 				if withfrom is None:
 					withfrom = d.origin
-					allout.append("FRAME %s" % d.origin)
+					allout.append("FROM %s" % d.origin)
 				else:
 					raise "Error double origin",d.origin
 			if d.body is not None:
@@ -127,10 +151,17 @@ def main():
 		if withfrom is None:
 			print "some part should specify a source!"
 		else:
-			j = os.path.join(args.output_dir,args.name)
-			if not os.path.isdir(j):
-				os.makedirs(j)
-			open(os.path.join(j,"Dockerfile"),"wb").write("\n".join(allout))
+			if args.shell:
+				print "making shell"
+				j = args.output_dir
+				if not os.path.isdir(j):
+					os.makedirs(j)
+				open(os.path.join(j,args.name+".sh"),"wb").write(docker2shell("\n".join(allout)))
+			else:
+				j = os.path.join(args.output_dir,args.name)
+				if not os.path.isdir(j):
+					os.makedirs(j)
+				open(os.path.join(j,"Dockerfile"),"wb").write("\n".join(allout))
 
 
 

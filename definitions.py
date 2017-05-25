@@ -18,8 +18,36 @@ RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-$GCCVERSION 50
 	else:
 		raise "Unknown ubuntu " + args.ubuntu
 
+def part_tensorflow(args):
+	return Dockerfile(None,"""
+	RUN apt-get install openjdk-8-jdk
+	RUN echo "deb [arch=amd64] http://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
+	RUN curl https://bazel.build/bazel-release.pub.gpg | sudo apt-key add -
+	RUN apt-get update && sudo apt-get install bazel
+
+	RUN apt-get install python-numpy python-dev python-pip python-wheel
+    RUN apt-get install libcupti-dev 
+	RUN git clone --depth 1 https://github.com/tensorflow/tensorflow  -b r1.2
+	RUN cd tensorflow
+	RUN export LD_LIBRARY_PATH=/usr/local/cuda-8.0/extra/CUPTI/lib64/
+	RUN bazel build --config=opt --config=cuda //tensorflow/tools/pip_package:build_pip_package 
+	RUN bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg
+	RUN pip install /tmp/tensorflow_pkg/tensorflow-*
+
+		""")
+def part_cafe(args):
+	return Dockerfile(None,"""
+		RUN apt-get install libgflags-dev libgoogle-glog-dev liblmdb-dev libprotobuf-dev libleveldb-dev libsnappy-dev libopencv-dev libhdf5-serial-dev protobuf-compiler --no-install-recommends libboost-all-dev libopenblas-dev 
+		RUN git clone --depth 1 https://github.com/BVLC/caffe
+		RUN caffe && mkdir cmake_build && cd cmake_build
+		RUN CFLAGS=-march=native CXXFLAGS=-march=native cmake -DCMAKE_BUILD_TYPE=Release .. 
+		RUN make -j
+		RUN make install
+	""")
+
+
 def part_cudnn(args):
-	# download cudnn
+	# download cudnn from my repository
 	# copy to correct cuda version
 	pass
 
@@ -27,7 +55,7 @@ def part_opencv(args):
 	prerequisites = """
 RUN apt-get install -y ffmpeg alsa-base alsa-utils pulseaudio libusb-1.0
 RUN apt-get -y install python$PYTHON_VERSION-dev wget unzip libtbb-dev \
-                   build-essential cmake git pkg-config libatlas-base-dev gfortran \
+                   build-essential cmake git screen pkg-config libatlas-base-dev gfortran \
                    libjasper-dev libgtk2.0-dev libavcodec-dev libavformat-dev \
                    libswscale-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libv4l-dev
 RUN wget https://bootstrap.pypa.io/get-pip.py && python get-pip.py
@@ -47,8 +75,6 @@ unzip -q opencv3.zip && mv ~/opencv-3.2.0 ~/opencv
 ENV PYTHON_VERSION 2.7
 
 {prerequisites:s}
-RUN wget https://bootstrap.pypa.io/get-pip.py && python get-pip.py
-RUN pip install numpy matplotlib
 
 {fetchpart:s}
 
@@ -57,6 +83,8 @@ WORKDIR ~/opencv/build
 RUN cmake -D CMAKE_BUILD_TYPE=RELEASE \
 	-D CMAKE_CXX_FLAGS=-march=native \
 	-D CMAKE_C_FLAGS=-march=native \
+	-D CUDA_ARCH_BIN={cudaptx:s}\
+	-D CUDA_ARCH_PTX={cudaptx:s}\
 	-D ENABLE_AVX2={avx2:s} \
 	-D ENABLE_AVX={avx2:s} \
 	-D ENABLE_FMA3={avx2:s} \
@@ -65,6 +93,7 @@ RUN cmake -D CMAKE_BUILD_TYPE=RELEASE \
 	-D ENABLE_SSE42={sse4:s} \
 	-D ENABLE_SSE31=ON \
 	-D ENABLE_SSE3=ON \
+	-D WITH_CUBLAS=ON \
 	-D BUILD_PYTHON_SUPPORT=ON \
 	-D BUILD_TESTS=OFF \
 	-D BUILD_PERF_TESTS=OFF \
@@ -77,7 +106,7 @@ RUN cmake -D CMAKE_BUILD_TYPE=RELEASE \
 	-D WITH_V4L=ON ..
 RUN make -j
 RUN make install
-	""".format(**dict(prerequisites=prerequisites,fetchpart=fetchpart,sse4="ON" if args.sse4 else "OFF",cuda="ON" if args.cuda != None else "OFF",avx2="ON" if args.avx2 else "OFF")))
+	""".format(**dict(cudaptx=",".join(args.cudaptx),prerequisites=prerequisites,fetchpart=fetchpart,sse4="ON" if args.sse4 else "OFF",cuda="ON" if args.cuda != None else "OFF",avx2="ON" if args.avx2 else "OFF")))
 
 def part_dlib(args):
 	return Dockerfile(None,"""
@@ -123,19 +152,54 @@ def part_avx2(args):
 def part_sse4(args):
 	pass
 
+#Supported Kernel/Compiler
+#CUDA 8.0.61
+#	Ubuntu 16.04	4.4.0	5.3.1
+#	Ubuntu 14.04	3.13	4.8.2	
+#CUDA 7.5.18
+#	TBD
+
+# Last Table
+# http://docs.nvidia.com/cuda/cuda-installation-guide-linux/#axzz4hOtgcDSj
+# Compiler Issues:
+# CUDA 7.5 and GCC > 4.9 not supported
+#	PATCH
+#	$ sudo vim /usr/local/cuda/include/host_config.h
+# CUDA 7.0 and GCC > 4.8 not supported
+#	$ sudo vim /usr/local/cuda/include/host_config.h
+#
+# Testing:
+#	cd /usr/local/cuda/samples/1_Utilities/deviceQuery
+# sudo make
+# 	./deviceQuery
+#	http://kislayabhi.github.io/Installing_CUDA_with_Ubuntu/
 def part_cuda(args):
+	if args.cuda == "7.5":
+		pre = 
+		"""
+		ARG CUDA_RUN_FILE=cuda_7.5.18_linux.run
+		ARG CUDA_URL=http://developer.download.nvidia.com/compute/cuda/7.5/Prod/local_installers/cuda_7.5.18_linux.run
+		"""
+	elif args.cuda == "8.0":
+		pre = 
+		"""
+		ARG CUDA_RUN_FILE=cuda_8.0.61_375.26_linux-run
+		ARG CURA_URL=https://developer.nvidia.com/compute/cuda/8.0/Prod2/local_installers/cuda_8.0.61_375.26_linux-run
+		"""
 	return Dockerfile(None,
-"""ARG CUDA_RUN_FILE=cuda_7.5.18_linux.run
+pre+
+"""
 ENV PYTHON_VERSION 2.7
 
 ENV CUDA_RUN_FILE ${CUDA_RUN_FILE}
+ENV CUDA_URL ${CUDA_URL}
 
 RUN mkdir ~//nvidia
 ADD . ~/nvidia/
 RUN apt-get update && apt-get install -q -y wget build-essential 
 
 RUN chmod +x ~/nvidia/${CUDA_RUN_FILE}
-RUN ~/nvidia/${CUDA_RUN_FILE} --toolkit --silent
+RUN ~/nvidia/${CUDA_RUN_FILE} --toolkit --silent --override
 RUN rm ~/nvidia/${CUDA_RUN_FILE} 
 """)
 

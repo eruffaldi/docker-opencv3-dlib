@@ -6,11 +6,28 @@ from definitions import *
 #http://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
 rdock2shell="""
 
-alias FROM=echo
-alias RUN=
 alias ARG=echo
-alias ENV="export $1=$2"
-alias WORKDIR=cd
+
+function RUN()
+{
+$*
+}
+function ENV()
+{
+export $1=$2;
+}
+function WORKDIR()
+{
+cd $1;
+}
+function CMD()
+{
+echo "CMD $*"
+}
+function FROM()
+{
+echo "CMD $*"
+}
 
 """
 
@@ -97,7 +114,8 @@ def main():
 	parser = argparse.ArgumentParser(description='Builds Dockerfiles')
 	parser.add_argument('--opencv',help="opencv version: 2 or 3")
 	parser.add_argument('--ubuntu',help="ubuntu version: 14.04 16.04",default="16.04")
-	parser.add_argument('--cuda',help="cuda version: 7.5",default="")
+	parser.add_argument('--cuda',help="cuda version: 7.5 or 8.0",default="")
+	parser.add_argument('--cudaptx',help="cuda compute capabilities: GTX 1080=6.1 GTX960=5.2 GTX770=3.5 K20m=3.5",nargs="+",default=["6.1","5.2","3.5"])
 	parser.add_argument('--sse4',help="enable sse4",type=bool,default=True)
 	parser.add_argument('--avx2',help="enable avx2",type=bool,default=True)
 	parser.add_argument('--dlib',help="enable dlib",type=bool)
@@ -124,6 +142,8 @@ def main():
 	parts.add("boost",part_boost,dict(boost="*"),requires=dict(ubuntu="*"))
 	#parts.add("gcc",part_gcc,dict(gcc="*"),requires=dict(ubuntu="*"))
 	parts.add("cudnn",part_cudnn,dict(cudnn="*"),requires=dict(cuda="*"))
+	parts.add("cafe",part_cafe,dict(cafe="*"),requires(cuda="8.0",opencv="*"))
+	parts.add("tensorflow",part_tensorflow,dict(tensorflow="*"),requires(cuda="8.0",cudnn="*"))
 
 	# now filter the graph by the conditions of the args, one node at time
 	parts.filter(args)

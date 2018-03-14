@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import argparse
 from toposort import toposort, toposort_flatten
 import os
@@ -112,13 +113,18 @@ class Parts:
 
 def main():
 	parser = argparse.ArgumentParser(description='Builds Dockerfiles')
-	parser.add_argument('--opencv',help="opencv version: 2 or 3")
+	parser.add_argument('--opencv',help="opencv version: 2 or (3.2,3.3,3.4 or 3 for last)")
 	parser.add_argument('--ubuntu',help="ubuntu version: 14.04 16.04",default="16.04")
-	parser.add_argument('--cuda',help="cuda version: 7.5 or 8.0",default="")
+	parser.add_argument('--cuda',help="cuda version: 7.5 or 8.0 or 9.0",default="")
 	parser.add_argument('--cudaptx',help="cuda compute capabilities: GTX 1080=6.1 GTX960=5.2 GTX770=3.5 K20m=3.5",nargs="+",default=["6.1","5.2","3.5"])
 	parser.add_argument('--sse4',help="enable sse4",type=bool,default=True)
 	parser.add_argument('--avx2',help="enable avx2",type=bool,default=True)
+	parser.add_argument('--pytorch',help="enable pytorch",type=bool,default=True)
 	parser.add_argument('--dlib',help="enable dlib",type=bool)
+	parser.add_argument('--tensorflow',type=bool,help="installs 1.6")
+	parser.add_argument('--cudnn',help="cuddn has to be provided externally")
+	parser.add_argument('--python',help="python version",default="2.7")
+
 	#parser.add_argument('--gcc',help="enable gcc update")
 	parser.add_argument('--boost',help="enable boost update with this version")
 	parser.add_argument('--ffmpeg',help="enable ffmpeg",type=bool,default=True)
@@ -138,12 +144,13 @@ def main():
 	parts.add("ffmpeg",part_ffmpeg,dict(ffmpeg="*"),requires=dict(ubuntu="*"))
 	parts.add("gstreamer",part_gstreamer,dict(gstreamer="*"),requires=dict(ubuntu="*"))
 	parts.add("dlib",part_dlib,dict(dlib="*"),requires=dict(opencv="3"))
+	parts.add("pytorch",part_pytorch,dict(dlib="*"),requires=dict(opencv="3"))
 	parts.add("cuda",part_cuda,dict(cuda="*"),requires=dict(ubuntu="*"))
 	parts.add("boost",part_boost,dict(boost="*"),requires=dict(ubuntu="*"))
 	#parts.add("gcc",part_gcc,dict(gcc="*"),requires=dict(ubuntu="*"))
 	parts.add("cudnn",part_cudnn,dict(cudnn="*"),requires=dict(cuda="*"))
-	parts.add("cafe",part_cafe,dict(cafe="*"),requires(cuda="8.0",opencv="*"))
-	parts.add("tensorflow",part_tensorflow,dict(tensorflow="*"),requires(cuda="8.0",cudnn="*"))
+	parts.add("cafe",part_cafe,dict(cafe="*"),requires=dict(cuda="9.0",opencv="*"))
+	parts.add("tensorflow",part_tensorflow,dict(tensorflow="*"),requires=dict(cuda="9.0",cudnn="*"))
 
 	# now filter the graph by the conditions of the args, one node at time
 	parts.filter(args)

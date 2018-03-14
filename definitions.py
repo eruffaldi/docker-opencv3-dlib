@@ -4,7 +4,7 @@ class Dockerfile:
 		self.body = body
 def part_linux(args):
 	if args.ubuntu == "14.04":
-		return Dockerfile("14.04",
+		return Dockerfile("ubuntu:14.04",
 			"""
 ENV GCCVERSION=4.9
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test
@@ -14,7 +14,7 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-$GCCVERSION 50
 RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-$GCCVERSION 50
 				""")
 	elif args.ubuntu == "16.04":
-		return Dockerfile("16.04",None)
+		return Dockerfile("ubuntu:16.04",None)
 	else:
 		raise "Unknown ubuntu " + args.ubuntu
 
@@ -27,9 +27,9 @@ def part_tensorflow(args):
 
 	RUN apt-get install python-numpy python-dev python-pip python-wheel
     RUN apt-get install libcupti-dev 
-	RUN git clone --depth 1 https://github.com/tensorflow/tensorflow  -b r1.2
+	RUN git clone --depth 1 https://github.com/tensorflow/tensorflow  -b r1.6
 	RUN cd tensorflow
-	RUN export LD_LIBRARY_PATH=/usr/local/cuda-8.0/extra/CUPTI/lib64/
+	RUN export LD_LIBRARY_PATH=/usr/local/cuda/extra/CUPTI/lib64/
 	RUN bazel build --config=opt --config=cuda //tensorflow/tools/pip_package:build_pip_package 
 	RUN bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg
 	RUN pip install /tmp/tensorflow_pkg/tensorflow-*
@@ -51,6 +51,15 @@ def part_cudnn(args):
 	# copy to correct cuda version
 	pass
 
+def part_pytorch(args):
+	cu = "cpu" if args.cuda == "" else args.cuda.replace(".","")
+	py = args.python.replace(".","")
+	py2 = py + "m"
+	version = "0.3.1"
+	pip = "pip3" if py.startswith("3") else "pip"
+	actions = ["%s install http://download.pytorch.org/whl/%s/torch-%s-cp%s-cp%s-linux_x86_64.whl"%(pip,cu,vrsion,py,py2),"%s install torchvision" % pip]
+	return Dockerfile(None,"\n".join(["RUN %s" % x for x in actions]))
+
 def part_opencv(args):
 	prerequisites = """
 RUN apt-get install -y ffmpeg alsa-base alsa-utils pulseaudio libusb-1.0
@@ -66,13 +75,23 @@ RUN pip install numpy matplotlib
 RUN wget https://github.com/opencv/opencv/archive/2.4.13.2.zip -O ~/opencv2.zip && \
     unzip -q opencv2.zip && mv ~/opencv-2.4.13.2 ~/opencv
 		"""
-	else:
+	elif args.opencv.startswith("3.2"):
 		fetchpart = """
 RUN wget https://github.com/opencv/opencv/archive/3.2.0.zip -O ~/opencv3.zip && \
 unzip -q opencv3.zip && mv ~/opencv-3.2.0 ~/opencv
 		"""
+	elif args.opencv.startswith("3.3"):
+		fetchpart = """
+RUN wget https://github.com/opencv/opencv/archive/3.3.0.zip -O ~/opencv3.zip && \
+unzip -q opencv3.zip && mv ~/opencv-3.3.0 ~/opencv
+		"""
+	else:
+		fetchpart = """
+RUN wget https://github.com/opencv/opencv/archive/3.4.1.zip -O ~/opencv3.zip && \
+unzip -q opencv3.zip && mv ~/opencv-3.4.1 ~/opencv
+		"""
 	return Dockerfile(None,"""
-ENV PYTHON_VERSION 2.7
+ENV PYTHON_VERSION {python:s}
 
 {prerequisites:s}
 
@@ -175,21 +194,21 @@ def part_sse4(args):
 #	http://kislayabhi.github.io/Installing_CUDA_with_Ubuntu/
 def part_cuda(args):
 	if args.cuda == "7.5":
-		pre = 
-		"""
-		ARG CUDA_RUN_FILE=cuda_7.5.18_linux.run
-		ARG CUDA_URL=http://developer.download.nvidia.com/compute/cuda/7.5/Prod/local_installers/cuda_7.5.18_linux.run
+		pre = """ARG CUDA_RUN_FILE=cuda_7.5.18_linux.run
+ARG CUDA_URL=http://developer.download.nvidia.com/compute/cuda/7.5/Prod/local_installers/cuda_7.5.18_linux.run
 		"""
 	elif args.cuda == "8.0":
-		pre = 
+		pre = """ARG CUDA_RUN_FILE=cuda_8.0.61_375.26_linux-run
+ARG CURA_URL=https://developer.nvidia.com/compute/cuda/8.0/Prod2/local_installers/cuda_8.0.61_375.26_linux-run
 		"""
-		ARG CUDA_RUN_FILE=cuda_8.0.61_375.26_linux-run
-		ARG CURA_URL=https://developer.nvidia.com/compute/cuda/8.0/Prod2/local_installers/cuda_8.0.61_375.26_linux-run
+	elif args.cuda == "9.0":
+		pre = """ARG CUDA_RUN_FILE=cuda_9.0.176_384.81_linux-run
+ARG CURA_URL=https://developer.nvidia.com/compute/cuda/9.0/Prod/local_installers/cuda_9.0.176_384.81_linux-run
 		"""
 	return Dockerfile(None,
 pre+
 """
-ENV PYTHON_VERSION 2.7
+ENV PYTHON_VERSION {python:s}
 
 ENV CUDA_RUN_FILE ${CUDA_RUN_FILE}
 ENV CUDA_URL ${CUDA_URL}

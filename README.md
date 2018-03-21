@@ -1,12 +1,5 @@
-TODO
-- update at the beginning
-- install build essentials
-- remove ffmpeg from opencv
-- add comment separators
-- fix bool flags
-- duplicate pip?
-- add matplotlib for dlib
-- add libfreenect2
+NOTE: now NVIDIA is providing pre-made CUDA/CUDNN images from 16.04 we need to modify this script to use them directly when cuda and cudnn are specified (https://hub.docker.com/r/nvidia/cuda/)
+
 
 # docker-opencv3-dlib
 Yet another opencv3 dlib repository. Optimized for SSE/AVX2

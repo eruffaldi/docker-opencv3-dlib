@@ -3,8 +3,17 @@ class Dockerfile:
 		self.origin = origin
 		self.body = body
 def part_linux(args):
+	if args.cuda == "":
+		base = "ubuntu:" + args.ubuntu
+	else:
+		bbase = [args.cuda]
+		if args.cudnn != "":
+			bbase.append("cudnn"+args.cudnn)
+		bbase.append("runtime" if args.runtime else "devel")
+		bbase.append("ubuntu"+args.ubuntu)
+		base = "-".join(bbase)
 	if args.ubuntu == "14.04":
-		return Dockerfile("ubuntu:14.04",
+		return Dockerfile(base,
 			"""
 ENV GCCVERSION=4.9
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test
@@ -14,7 +23,7 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-$GCCVERSION 50
 RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-$GCCVERSION 50
 				""")
 	elif args.ubuntu == "16.04":
-		return Dockerfile("ubuntu:16.04",None)
+		return Dockerfile(base,None)
 	else:
 		raise "Unknown ubuntu " + args.ubuntu
 
@@ -46,18 +55,13 @@ def part_cafe(args):
 	""")
 
 
-def part_cudnn(args):
-	# download cudnn from my repository
-	# copy to correct cuda version
-	pass
-
 def part_pytorch(args):
 	cu = "cpu" if args.cuda == "" else args.cuda.replace(".","")
 	py = args.python.replace(".","")
 	py2 = py + "m"
 	version = "0.3.1"
 	pip = "pip3" if py.startswith("3") else "pip"
-	actions = ["%s install http://download.pytorch.org/whl/%s/torch-%s-cp%s-cp%s-linux_x86_64.whl"%(pip,cu,vrsion,py,py2),"%s install torchvision" % pip]
+	actions = ["%s install http://download.pytorch.org/whl/%s/torch-%s-cp%s-cp%s-linux_x86_64.whl"%(pip,cu,version,py,py2),"%s install torchvision" % pip]
 	return Dockerfile(None,"\n".join(["RUN %s" % x for x in actions]))
 
 def part_opencv(args):
@@ -125,7 +129,7 @@ RUN cmake -D CMAKE_BUILD_TYPE=RELEASE \
 	-D WITH_V4L=ON ..
 RUN make -j
 RUN make install
-	""".format(**dict(cudaptx=",".join(args.cudaptx),prerequisites=prerequisites,fetchpart=fetchpart,sse4="ON" if args.sse4 else "OFF",cuda="ON" if args.cuda != None else "OFF",avx2="ON" if args.avx2 else "OFF")))
+	""".format(**dict(python=args.python,cudaptx=",".join(args.cudaptx),prerequisites=prerequisites,fetchpart=fetchpart,sse4="ON" if args.sse4 else "OFF",cuda="ON" if args.cuda != "" else "OFF",avx2="ON" if args.avx2 else "OFF")))
 
 def part_dlib(args):
 	return Dockerfile(None,"""
@@ -171,6 +175,10 @@ def part_avx2(args):
 def part_sse4(args):
 	pass
 
+def part_cuda(args):
+	pass
+def part_cudnn(args):
+	pass
 #Supported Kernel/Compiler
 #CUDA 8.0.61
 #	Ubuntu 16.04	4.4.0	5.3.1
@@ -192,7 +200,7 @@ def part_sse4(args):
 # sudo make
 # 	./deviceQuery
 #	http://kislayabhi.github.io/Installing_CUDA_with_Ubuntu/
-def part_cuda(args):
+def OLD_part_cuda(args):
 	if args.cuda == "7.5":
 		pre = """ARG CUDA_RUN_FILE=cuda_7.5.18_linux.run
 ARG CUDA_URL=http://developer.download.nvidia.com/compute/cuda/7.5/Prod/local_installers/cuda_7.5.18_linux.run

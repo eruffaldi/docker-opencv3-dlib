@@ -1,9 +1,9 @@
 #!/bin/bash
 
-python makedockers.py --shell --opencv=3 --ubuntu=14.04 --cuda=8.0 --sse4 --avx2 --dlib --gcc --boost --ffmpeg --gstreamer --name "opencv3_u1404_cu80_sse4_avx2_dlib_gcc"
+python makedockers.py --shell --opencv=3 --ubuntu=14.04 --cuda=8.0 --sse4 --avx2 --dlib  --boost --ffmpeg --gstreamer --name "opencv3_u1404_cu80_sse4_avx2_dlib_gcc"
 
 # no AVX
-python makedockers.py --shell --opencv=3 --ubuntu=14.04 --cuda=8.0 --sse4 --dlib --gcc --boost --ffmpeg --gstreamer --name "opencv3_u1404_cu80_sse4_dlib_gcc"
+python makedockers.py --shell --opencv=3 --ubuntu=14.04 --cuda=8.0 --sse4 --dlib  --boost --ffmpeg --gstreamer --name "opencv3_u1404_cu80_sse4_dlib_gcc"
 
 # full u16.04
 python makedockers.py --shell --opencv=3 --ubuntu=16.04 --cuda=8.0 --sse4 --avx2 --dlib --ffmpeg --booost --gstreamer --name "opencv3_u1604_cu80_sse4_avx2_dlib"
